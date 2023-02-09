@@ -1,0 +1,17 @@
+{
+  "FORCAIO-dev": [{
+    "PutRequest": {
+      "Item": {
+        "partitionKey": {
+          "S": "WORD#laranja"
+        },
+        "sortKey": {
+          "S": "CATEGORY#fruta"
+        },
+        "length": {
+          "N": 7
+        }
+      }
+    }
+  }]
+}

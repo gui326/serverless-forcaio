@@ -1,0 +1,85 @@
+org: gui326
+app: serverless-forcaio
+service: serverless-forcaio
+
+plugins:
+  - serverless-dynamodb-local
+  - serverless-offline
+
+custom:
+  dynamodb:
+    # If you only want to use DynamoDB Local in some stages, declare them here
+    stages:
+      - dev
+    start:
+      port: 8000
+      inMemory: true
+      heapInitial: 200m
+      heapMax: 1g
+      migrate: true
+      seed: true
+      convertEmptyValues: true
+    seed:
+      domain:
+        sources:
+          - table: FORCAIO-dev
+            sources: [./wordsSeed.json]
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+
+  stage: dev
+  region: sa-east-1
+  environment:
+    FORCAIO_TABLE: "FORCAIO-${opt:stage, self:provider.stage}"
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:DescribeTable
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
+          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FORCAIO_TABLE}"
+
+functions:
+  createToken:
+    handler: handler.createToken
+    events:
+      - http:
+          path: createtoken
+          method: post
+
+  playSolo:
+    handler: playSolo.playSolo
+    events:
+      - http:
+          path: playsolo
+          method: post
+
+resources:
+  Resources:
+    forcaioTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.FORCAIO_TABLE}
+        AttributeDefinitions:
+          - AttributeName: partitionKey
+            AttributeType: S
+          - AttributeName: sortKey
+            AttributeType: S
+        KeySchema:
+          - AttributeName: partitionKey
+            KeyType: HASH
+          - AttributeName: sortKey
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
